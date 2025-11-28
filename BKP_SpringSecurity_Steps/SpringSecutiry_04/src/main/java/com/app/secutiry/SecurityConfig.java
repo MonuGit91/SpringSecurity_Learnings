@@ -15,9 +15,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
-
 //command + shift + T = SecurityFilterChainConfiguration
-
 
 @Configuration
 @EnableWebSecurity
@@ -28,24 +26,10 @@ public class SecurityConfig {
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
 
         // ✅ Every request must be authenticated — no public endpoints
-    	http.authorizeHttpRequests(auth -> auth
-    		    .requestMatchers("/h2-console", "/h2-console/**").permitAll()
-    		    .anyRequest().authenticated()
-    		);
-    	
-    	// ✅ Disable CSRF protection ONLY for H2 Console requests
-    	// - H2 Console uses POST forms but does NOT send CSRF tokens
-    	// - Without this, accessing H2 Console results in 403 Forbidden
-    	// - Scoped exemption keeps CSRF enabled for all other endpoints (best practice)
-    	http.csrf(csrf -> csrf.ignoringRequestMatchers("/h2-console/**"));
+        http.authorizeHttpRequests(auth -> auth
+                .anyRequest().authenticated()
+        );
 
-    	// ✅ Allow H2 Console to render inside browser frames
-    	// - Spring Security blocks framing by default to prevent clickjacking
-    	// - H2 Console UI is loaded inside an HTML <frame>, so it would fail
-    	// - sameOrigin = allow frames ONLY from the same domain (safer than disabling completely)
-    	http.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
-  
-    	
         /*
          ✅ Make the application STATELESS (recommended for REST APIs)
          - Spring Security will NOT create or use HttpSession
