@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /*
- * Role Based Authorization Line By Line | Spring Security Full Course Series | Video #6
+ * In Memory Authentication Line By Line | Spring Security Series | Video #5
  */
 
 @SpringBootApplication

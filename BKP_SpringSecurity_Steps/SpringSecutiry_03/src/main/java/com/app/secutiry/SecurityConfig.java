@@ -4,8 +4,6 @@ import static org.springframework.security.config.Customizer.withDefaults;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -15,11 +13,11 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
+
 //command + shift + T = SecurityFilterChainConfiguration
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
 public class SecurityConfig {
 
     @Bean
@@ -67,17 +65,14 @@ public class SecurityConfig {
         // ✅ Creating test users stored in memory (not DB)
         UserDetails admin = User.withUsername("admin")
                 .password("{noop}AdminPass") // {noop} → no password encoder (plain text)
-                .roles("ADMIN")
                 .build();
 
         UserDetails user1 = User.withUsername("user1")
                 .password("{noop}User1Pass")
-                .roles("USER")
                 .build();
 
         UserDetails user2 = User.withUsername("user2")
                 .password("{noop}User2Pass")
-                .roles("USER")
                 .build();
 
         // ✅ Register all test users
