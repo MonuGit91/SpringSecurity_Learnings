@@ -7,27 +7,19 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
-
-//command + shift + T = SecurityFilterChainConfiguration
-
+// command + shift + T = SecurityFilterChainConfiguration
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-
-    @Bean
+	@Bean
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
-
-        // ✅ Every request must be authenticated — no public endpoints
+        // ✅ Every request must be authenticated — no public endpointsO
         http.authorizeHttpRequests(auth -> auth
                 .anyRequest().authenticated()
         );
-
+        
         /*
          ✅ Make the application STATELESS (recommended for REST APIs)
          - Spring Security will NOT create or use HttpSession
@@ -38,7 +30,7 @@ public class SecurityConfig {
         http.sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
         );
-
+        
         /*
          ✅ Enable HTTP Basic Authentication
          - Browser/clients send credentials in Authorization header:
@@ -47,7 +39,7 @@ public class SecurityConfig {
          - Stateless by nature because credentials are sent every time
         */
         http.httpBasic(withDefaults());
-
+        
         /*
          🚫 formLogin() intentionally disabled
          - formLogin creates login page & uses HttpSession to store authentication
@@ -58,24 +50,9 @@ public class SecurityConfig {
 
         return http.build();
     }
-
-    @Bean
-    public UserDetailsService userDetailsService() {
-
-        // ✅ Creating test users stored in memory (not DB)
-        UserDetails admin = User.withUsername("admin")
-                .password("{noop}AdminPass") // {noop} → no password encoder (plain text)
-                .build();
-
-        UserDetails user1 = User.withUsername("user1")
-                .password("{noop}User1Pass")
-                .build();
-
-        UserDetails user2 = User.withUsername("user2")
-                .password("{noop}User2Pass")
-                .build();
-
-        // ✅ Register all test users
-        return new InMemoryUserDetailsManager(admin, user1, user2);
-    }
 }
+/*
+ * 
+ * 
+ * 
+ */
