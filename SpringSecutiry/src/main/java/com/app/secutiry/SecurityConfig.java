@@ -1,12 +1,13 @@
 package com.app.secutiry;
 
-import static org.springframework.security.config.Customizer.withDefaults;
-
 import javax.sql.DataSource;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -18,6 +19,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.JdbcUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import com.app.utilities.AuthEntryPointJWT;
+import com.app.utilities.AuthTokenFilter;
 
 //command + shift + T = SecurityFilterChainConfiguration
 
@@ -25,79 +30,111 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
-
 	@Autowired
 	DataSource dataSource;
+	@Autowired
+	private AuthEntryPointJWT unauthorizedHandler;
 
 	@Bean
 	SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
 
 		// ✅ Every request must be authenticated — no public endpoints
-		http.authorizeHttpRequests(
-				auth -> auth.requestMatchers("/h2-console", "/h2-console/**").permitAll().anyRequest().authenticated());
+		http.authorizeHttpRequests(auth -> auth.requestMatchers("/h2-console", "/h2-console/**").permitAll()
+				.requestMatchers("/api/login").permitAll().anyRequest().authenticated());
 
-		// ✅ Disable CSRF protection ONLY for H2 Console requests
-		// - H2 Console uses POST forms but does NOT send CSRF tokens
-		// - Without this, accessing H2 Console results in 403 Forbidden
-		// - Scoped exemption keeps CSRF enabled for all other endpoints (best practice)
-		http.csrf(csrf -> csrf.ignoringRequestMatchers("/h2-console/**"));
-
-		// ✅ Allow H2 Console to render inside browser frames
-		// - Spring Security blocks framing by default to prevent clickjacking
-		// - H2 Console UI is loaded inside an HTML <frame>, so it would fail
-		// - sameOrigin = allow frames ONLY from the same domain (safer than disabling
-		// completely)
-		http.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
-
-		/*
-		 * ✅ Make the application STATELESS (recommended for REST APIs) - Spring
-		 * Security will NOT create or use HttpSession - No JSESSIONID cookie will be
-		 * sent to the browser - Server will NOT remember logged-in user between
-		 * requests - Each request must contain authentication info again
-		 */
 		http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-		/*
-		 * ✅ Enable HTTP Basic Authentication - Browser/clients send credentials in
-		 * Authorization header: Authorization: Basic base64(username:password) - Good
-		 * for testing / internal APIs - Stateless by nature because credentials are
-		 * sent every time
-		 */
-		http.httpBasic(withDefaults());
+		http.exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler));
+		http.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()));
+		http.csrf(csrf -> csrf.disable());
 
-		/*
-		 * 🚫 formLogin() intentionally disabled - formLogin creates login page & uses
-		 * HttpSession to store authentication - Session login = STATEFUL, opposite of
-		 * stateless API - Should NOT be used when sessionCreationPolicy = STATELESS
-		 */
-		// http.formLogin(withDefaults());
+		http.addFilterBefore(authJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
 
 		return http.build();
-	}
-
-	@Bean
-	public UserDetailsService userDetailsService() {
-
-		// ✅ Creating test users stored in memory (not DB)
-		UserDetails admin = User.withUsername("admin").password(passwordEncoder().encode("AdminPass")) 
-				.roles("ADMIN").build();
-		UserDetails user1 = User.withUsername("user1").password(passwordEncoder().encode("User1Pass")).roles("USER")
-				.build();
-		UserDetails user2 = User.withUsername("user2").password(passwordEncoder().encode("User2Pass")).roles("USER")
-				.build();
-		
-//      return new InMemoryUserDetailsManager(admin, user1, user2);
-
-		JdbcUserDetailsManager jdbcUserDetailsManager = new JdbcUserDetailsManager(dataSource);
-		jdbcUserDetailsManager.createUser(admin);
-		jdbcUserDetailsManager.createUser(user1);
-		jdbcUserDetailsManager.createUser(user2);
-		return jdbcUserDetailsManager;
-//        // ✅ Register all test users
 	}
 
 	@Bean
 	public PasswordEncoder passwordEncoder() {
 		return new BCryptPasswordEncoder();
 	}
+
+	@Bean
+	public AuthenticationManager authenticationManager(AuthenticationConfiguration builder) throws Exception {
+		return builder.getAuthenticationManager();
+	}
+
+	@Bean
+	public AuthTokenFilter authJwtTokenFilter() {
+		return new AuthTokenFilter();
+	}
+
+	@Bean
+	public UserDetailsService userDetailsService() {
+		// We only return the mechanism (JdbcUserDetailsManager) for looking up users.
+		// We do NOT try to insert data here, as the database tables might not exist
+		// yet.
+		return new JdbcUserDetailsManager(dataSource);
+	}
+
+	// 2. The Bean that inserts the initial data (runs AFTER the DB schema is
+	// created)
+	@Bean
+	public CommandLineRunner initData(UserDetailsService userDetailsService) {
+		return args -> {
+			// Cast the UserDetailsService back to its concrete implementation (or inject
+			// JdbcUserDetailsManager directly)
+			JdbcUserDetailsManager jdbcUserDetailsManager = (JdbcUserDetailsManager) userDetailsService;
+
+			// Only proceed if the user doesn't already exist to prevent re-creation on
+			// every startup
+			if (!jdbcUserDetailsManager.userExists("admin")) {
+				UserDetails admin = User.withUsername("admin").password(passwordEncoder().encode("AdminPass"))
+						.roles("ADMIN").build();
+				UserDetails user1 = User.withUsername("user1").password(passwordEncoder().encode("User1Pass"))
+						.roles("USER").build();
+				UserDetails user2 = User.withUsername("user2").password(passwordEncoder().encode("User2Pass"))
+						.roles("USER").build();
+
+				jdbcUserDetailsManager.createUser(admin);
+				jdbcUserDetailsManager.createUser(user1);
+			}
+		};
+	}
+
+	/*
+	 * //why CommandLineRunner aproach works while below aborach gives and error
+	 * saying: Error starting Tomcat context. Exception:
+	 * org.springframework.beans.factory.UnsatisfiedDependencyException. Message:
+	 * Error creating bean with name 'authJwtTokenFilter': Unsatisfied dependency
+	 * expressed through field 'userDetailsService': Error creating bean with name
+	 * 'userDetailsService' defined in class path resource
+	 * [com/app/secutiry/SecurityConfig.class]: Failed to instantiate
+	 * [org.springframework.security.core.userdetails.UserDetailsService]: Factory
+	 * method 'userDetailsService' threw exception with message:
+	 * PreparedStatementCallback; bad SQL grammar [insert into users (username,
+	 * password, enabled) values (?,?,?)]
+	 * 
+	 * Answer: The direct @Bean approach fails because it attempts to insert data
+	 * into the USERS table before Spring Security's initialization scripts have
+	 * automatically created that table. CommandLineRunner is guaranteed to execute
+	 * after the application context is fully loaded and the database schema is
+	 * ready, ensuring the USERS table exists for data insertion.
+	 */
+
+//	@Bean
+//	public UserDetailsService userDetailsService() {
+//		UserDetails admin = User.withUsername("admin").password(passwordEncoder().encode("AdminPass")).roles("ADMIN")
+//				.build();
+//		UserDetails user1 = User.withUsername("user1").password(passwordEncoder().encode("User1Pass")).roles("USER")
+//				.build();
+//		UserDetails user2 = User.withUsername("user2").password(passwordEncoder().encode("User2Pass")).roles("USER")
+//				.build();
+//
+//		JdbcUserDetailsManager jdbcUserDetailsManager = new JdbcUserDetailsManager(dataSource);
+//		jdbcUserDetailsManager.createUser(admin);
+//		jdbcUserDetailsManager.createUser(user1);
+//		jdbcUserDetailsManager.createUser(user2);
+//		return jdbcUserDetailsManager;
+//	}
+
 }
