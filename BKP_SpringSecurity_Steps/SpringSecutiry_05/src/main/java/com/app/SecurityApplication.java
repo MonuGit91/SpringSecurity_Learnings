@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /*
- * Database Authentication In Spring Boot Line By Line | Spring Security Full Course Tutorial | #8
+ * Role Based Authorization Line By Line | Spring Security Full Course Series | Video #6
  */
 
 @SpringBootApplication
