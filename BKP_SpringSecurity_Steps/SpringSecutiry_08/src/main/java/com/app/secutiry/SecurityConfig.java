@@ -39,10 +39,8 @@ public class SecurityConfig {
 	SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
 
 		// ✅ Every request must be authenticated — no public endpoints
-//		http.authorizeHttpRequests(auth -> auth.requestMatchers("/h2-console", "/h2-console/**").permitAll()
-//				.requestMatchers("/api/login").permitAll().anyRequest().authenticated());
-		
-		http.authorizeHttpRequests(auth -> auth.requestMatchers("/api/login").permitAll().anyRequest().authenticated());
+		http.authorizeHttpRequests(auth -> auth.requestMatchers("/h2-console", "/h2-console/**").permitAll()
+				.requestMatchers("/api/login").permitAll().anyRequest().authenticated());
 
 		http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
@@ -90,9 +88,11 @@ public class SecurityConfig {
 			// Only proceed if the user doesn't already exist to prevent re-creation on
 			// every startup
 			if (!jdbcUserDetailsManager.userExists("admin")) {
-				UserDetails admin = User.withUsername("admin").password(passwordEncoder().encode("admin"))
+				UserDetails admin = User.withUsername("admin").password(passwordEncoder().encode("AdminPass"))
 						.roles("ADMIN").build();
-				UserDetails user1 = User.withUsername("user1").password(passwordEncoder().encode("user1"))
+				UserDetails user1 = User.withUsername("user1").password(passwordEncoder().encode("User1Pass"))
+						.roles("USER").build();
+				UserDetails user2 = User.withUsername("user2").password(passwordEncoder().encode("User2Pass"))
 						.roles("USER").build();
 
 				jdbcUserDetailsManager.createUser(admin);
