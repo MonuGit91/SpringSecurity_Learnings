@@ -1,0 +1,4 @@
+spring:
+  app:
+    jwtSecret: MySecretKey1234QRsdfghjk23456789sdfghj345678sdfghjk34567890sdfghjkl3456789
+    jwtExpirationMs: 300000000
