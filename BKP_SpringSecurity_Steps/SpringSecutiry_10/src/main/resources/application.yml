@@ -1,0 +1,25 @@
+spring:
+  sql:
+    init:
+      mode: always        # force SQL init for non-embedded DBs
+      encoding: UTF-8
+
+  app:
+    jwtSecret: >-
+      MySecretKey1234QRsdfghjk23456789sdfghj345678sdfghjk34567890sdfghjkl3456789
+    jwtExpirationMs: 300000000
+
+  datasource:
+    url: jdbc:oracle:thin:@localhost:1521/orclpdb
+    username: monu
+    password: monu1234
+    driver-class-name: oracle.jdbc.OracleDriver
+
+  jpa:
+    defer-datasource-initialization: true   # ensure schema.sql runs BEFORE Hibernate
+    hibernate:
+      ddl-auto: update                      # use update only for dev
+    show-sql: true
+    properties:
+      hibernate:
+#        dialect: org.hibernate.dialect.Oracle12cDialect

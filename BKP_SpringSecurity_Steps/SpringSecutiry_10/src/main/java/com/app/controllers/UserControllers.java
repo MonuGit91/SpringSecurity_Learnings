@@ -13,20 +13,16 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.JdbcUserDetailsManager;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.app.dto.LoginRequest;
-import com.app.dto.LoginResponse;
-import com.app.dto.RegisterRequest;
-import com.app.util.JwtUtils;
+import com.app.utilities.JwtUtils;
+import com.app.utilities.LoginRequest;
+import com.app.utilities.LoginResponse;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,8 +34,6 @@ import lombok.extern.slf4j.Slf4j;
 public class UserControllers {
 	private final AuthenticationManager authenticationManager;
 	private final JwtUtils jwtUtils;
-	private final JdbcUserDetailsManager userDetailsManager;
-	private final PasswordEncoder passwordEncoder;
 	
 	
 	@PostMapping("/login")
@@ -68,47 +62,6 @@ public class UserControllers {
 				.build();
 		
 		return ResponseEntity.ok(response);
-	}
-
-	@PostMapping("/register")
-	public ResponseEntity<?> registerUser(@RequestBody RegisterRequest registerRequest) {
-		Map<String, Object> response = new HashMap<>();
-
-		if (registerRequest.getUsername() == null || registerRequest.getUsername().trim().isEmpty()) {
-			response.put("message", "Username is required");
-			response.put("status", false);
-			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-		}
-
-		if (registerRequest.getPassword() == null || registerRequest.getPassword().trim().isEmpty()) {
-			response.put("message", "Password is required");
-			response.put("status", false);
-			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-		}
-
-		if (!registerRequest.getPassword().equals(registerRequest.getConfirmPassword())) {
-			response.put("message", "Passwords do not match");
-			response.put("status", false);
-			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-		}
-
-		if (userDetailsManager.userExists(registerRequest.getUsername())) {
-			response.put("message", "Username already exists");
-			response.put("status", false);
-			return new ResponseEntity<>(response, HttpStatus.CONFLICT);
-		}
-
-		UserDetails user = User
-				.withUsername(registerRequest.getUsername())
-				.password(passwordEncoder.encode(registerRequest.getPassword()))
-				.roles("USER")
-				.build();
-
-		userDetailsManager.createUser(user);
-
-		response.put("message", "User registered successfully");
-		response.put("status", true);
-		return new ResponseEntity<>(response, HttpStatus.CREATED);
 	}
 	
 	@GetMapping("/common")
